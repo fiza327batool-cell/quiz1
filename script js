@@ -1,0 +1,99 @@
+/* Silk & Veil shared JavaScript */
+document.addEventListener("DOMContentLoaded", () => {
+  const path = window.location.pathname.toLowerCase();
+  const current = path.endsWith("product-info.html")
+    ? "product-info"
+    : path.endsWith("order-page.html")
+      ? "order-page"
+      : "home";
+
+  // Mark the correct one of the three navigation links on each page.
+  document.querySelectorAll("[data-path]").forEach(link => {
+    const key = (link.getAttribute("data-path") || "").toLowerCase();
+    link.classList.toggle("sv-current", key === current);
+    if (key === current) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+
+  // Turn the existing desktop navigation into a compact mobile menu.
+  const header = document.querySelector("header");
+  const desktopNav = [...document.querySelectorAll("nav")].find(nav =>
+    nav.querySelector('[data-path="home"]') &&
+    nav.querySelector('[data-path="product-info"]') &&
+    nav.querySelector('[data-path="order-page"]')
+  );
+
+  if (header && desktopNav) {
+    desktopNav.classList.add("sv-desktop-nav");
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "sv-mobile-toggle";
+    toggle.setAttribute("aria-label", "Open navigation menu");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.textContent = "☰";
+
+    const mobileNav = document.createElement("nav");
+    mobileNav.className = "sv-mobile-nav";
+    mobileNav.setAttribute("aria-label", "Mobile navigation");
+    [
+      ["home", "Home", "home.html"],
+      ["product-info", "Product Info", "product-info.html"],
+      ["order-page", "Place Order", "order-page.html"]
+    ].forEach(([key, label, href]) => {
+      const a = document.createElement("a");
+      a.href = href;
+      a.dataset.path = key;
+      a.textContent = label;
+      if (key === current) {
+        a.classList.add("sv-current");
+        a.setAttribute("aria-current", "page");
+      }
+      mobileNav.appendChild(a);
+    });
+
+    // Insert the toggle into the header, next to the existing navigation.
+    const navParent = desktopNav.parentElement;
+    if (navParent) navParent.insertBefore(toggle, desktopNav.nextSibling);
+    header.appendChild(mobileNav);
+
+    toggle.addEventListener("click", () => {
+      const open = mobileNav.classList.toggle("is-open");
+      toggle.textContent = open ? "×" : "☰";
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
+    });
+    mobileNav.querySelectorAll("a").forEach(a => a.addEventListener("click", () => {
+      mobileNav.classList.remove("is-open");
+      toggle.textContent = "☰";
+      toggle.setAttribute("aria-expanded", "false");
+    }));
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 1023) {
+        mobileNav.classList.remove("is-open");
+        toggle.textContent = "☰";
+        toggle.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+
+  // Keep all internal navigation links working even if a source page used a data-path.
+  document.querySelectorAll("a[data-path]").forEach(link => {
+    const key = link.dataset.path;
+    const destinations = {
+      home: "home.html",
+      "product-info": "product-info.html",
+      "order-page": "order-page.html"
+    };
+    if (destinations[key]) link.setAttribute("href", destinations[key]);
+  });
+
+  // Lightweight feedback for checkout forms. It does not pretend to submit/store orders.
+  const orderForm = document.querySelector("form");
+  if (orderForm && /order-page\.html$/i.test(path)) {
+    orderForm.addEventListener("submit", event => {
+      const submitter = event.submitter;
+      if (submitter && submitter.type === "button") return;
+      // Let any existing form validation and page-specific submit handler run normally.
+    });
+  }
+});
